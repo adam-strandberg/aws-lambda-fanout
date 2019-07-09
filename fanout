@@ -94,7 +94,7 @@ function checkFirehoseTarget {
 ## Locates a destination Amazon SQS Queue
 function checkSqsTarget {
   if [ ! -z "$DESTINATION_NAME" ]; then
-    DESTINATION_ID=$( echo "$DESTINATION_NAME" | grep -E -e '^https://((queue)|(sqs\.[a-z]+-[a-z]+-[0-9]))\.amazonaws\.com/[0-9]{12}/[a-zA-Z0-9_-]{1,80}$' )
+    DESTINATION_ID=$( echo "$DESTINATION_NAME" | grep -E -e '^https://((queue)|(sqs\.[a-z]+-[a-z]+-[0-9]))\.amazonaws\.com/[0-9]{12}/[a-zA-Z0-9_-]{1,80}?(\.fifo)$' )
     if [ -z "${DESTINATION_ID}" ]; then
       if [ ! -z "${DESTINATION_ROLE_ARN}" ]; then
         echo "Invalid url '${DESTINATION_NAME}', must be a fully qualified Amazon SQS Queue Url" 1>&2
