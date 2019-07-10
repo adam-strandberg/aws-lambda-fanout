@@ -16,8 +16,8 @@
         "test": "mocha"
     },
     "devDependencies": {
-        "mocha": "2.4.5",
-        "aws-sdk": "2.490.0"
+        "aws-sdk": "2.490.0",
+        "mocha": "^2.4.5"
     },
     "files": [
         "lib",
