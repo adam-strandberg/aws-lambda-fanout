@@ -127,15 +127,17 @@ function interceptService(serviceReference, target, event, stats, callback) {
 
 //********
 // This function manages the messages for a target
-function sendMessages(eventSourceARN, target, event, stats, callback) {
+function sendMessages(eventSourceARN, targets, event, stats, callback) {
   if(config.debug) {
     console.log("Processing target '" + target.id + "'");
   }
 
   var start = Date.now();
-  stats.addTick('targets#' + eventSourceARN);
-  stats.register('records#' + eventSourceARN + '#' + target.destination, 'Records', 'stats', 'Count', eventSourceARN, target.destination);
-  stats.addValue('records#' + eventSourceARN + '#' + target.destination, event.Records.length);
+  targets.forEach(function(target) {
+    stats.addTick('targets#' + eventSourceARN);
+    stats.register('records#' + eventSourceARN + '#' + target.destination, 'Records', 'stats', 'Count', eventSourceARN, target.destination);
+    stats.addValue('records#' + eventSourceARN + '#' + target.destination, event.Records.length);
+  })
 
   async.waterfall([
       function(done) { services.get(target, done); },
@@ -185,7 +187,7 @@ function fanOut(eventSourceARN, event, context, targets, stats, callback) {
   var start        = Date.now();
   var hasErrors    = false;
 
-  var queue = async.queue(function(target, done) {
+  var queue = async.queue(function(targets, done) {
     sendMessages(eventSourceARN, target, event, stats, done);
   }, config.parallelTargets);
 
@@ -201,15 +203,13 @@ function fanOut(eventSourceARN, event, context, targets, stats, callback) {
     }
   };
 
-  // Add all targets to the queue
-  targets.forEach(function(target) {
-    queue.push(target, function(err) {
-      if(err) {
-        console.error("Error processing record: ", err);
-        hasErrors = true;
-      }
-    });
+  queue.push(targets, function(err) {
+    if(err) {
+      console.error("Error processing record: ", err);
+      hasErrors = true;
+    }
   });
+
 }
 
 //********
