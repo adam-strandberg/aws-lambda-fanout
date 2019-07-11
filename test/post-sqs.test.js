@@ -5,26 +5,22 @@ var assert = require('assert');
 describe('post-sqs', function() {
   describe('#getShardNum', function() {
     it('returns the personId mod shardCount', function() {
-      var target = {
+      const target = {
         shardCount: 2
       };
-      var personId = "5-Ab0"
+      var personId = "59a67a994c972005e4238422"
       assert.strictEqual(PostSQS.getShardNum(target, personId), 0)
-      personId = "5-Ab1"
+      personId = "59a67a994c972005e4238423"
       assert.strictEqual(PostSQS.getShardNum(target, personId), 1)
     });
   });
 
   describe('#queueUrl', function() {
     it('constructs the correct Url to forward SQS messages to', function() {
-      var record = {
-        data: {
-          payload: {
-            personId: "1"
-          }
-        }
+      const record = {
+        data: JSON.stringify({userId: "1"})
       }
-      var target = {
+      const target = {
         region: "us-east-1",
         externalId: "accountNum",
         shardCount: 2,
