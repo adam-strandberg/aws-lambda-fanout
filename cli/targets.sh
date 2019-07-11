@@ -206,6 +206,15 @@ function readTargetParams {
         doHelp
         exit -1
       fi
+    elif [ "$CODE" == "--destination-base-queue-name" ]; then
+      if [ $# -ne 0 ]; then
+        DESTINATION_BASE_QUEUE_NAME=$1
+        shift
+      else
+        echo "readTargetParams: You must specify a value for parameter $CODE" 1>&2
+        doHelp
+        exit -1
+      fi
     elif [ "$CODE" == "--index" ]; then
       if [ "$WORKER_TYPE" != "es" ]; then
         echo "Parameter --index is only available for Amazon Elasticsearch Service targets" 1>&2
@@ -434,6 +443,7 @@ function buildObject {
     appendJsonProperty "$1" "type" "{\"S\":\"${WORKER_TYPE}\"}"
     appendJsonProperty "$1" "destination" "{\"S\":\"${DESTINATION_ID}\"}"
     appendJsonProperty "$1" "shardCount" "{\"N\":\"${SHARD_COUNT}\"}"
+    appendJsonProperty "$1" "destinationBaseQueueName" "{\"S\":\"${DESTINATION_BASE_QUEUE_NAME}\"}"
 
     if [ ! -z "${DESTINATION_ROLE_ARN}" ]; then
       appendJsonProperty "$1" "role" "{\"S\":\"${DESTINATION_ROLE_ARN}\"}"
