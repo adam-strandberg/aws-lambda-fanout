@@ -8,22 +8,10 @@ describe('post-sqs', function() {
       var target = {
         shardCount: 2
       };
-      var record = {
-        data: {
-          payload: {
-            personId: "5-Ab0"
-          }
-        }
-      };
-      assert.strictEqual(PostSQS.getShardNum(target, record), 0)
-      record = {
-        data: {
-          payload: {
-            personId: "5-Ab1"
-          }
-        }
-      }
-      assert.strictEqual(PostSQS.getShardNum(target, record), 1)
+      var personId = "5-Ab0"
+      assert.strictEqual(PostSQS.getShardNum(target, personId), 0)
+      personId = "5-Ab1"
+      assert.strictEqual(PostSQS.getShardNum(target, personId), 1)
     });
   });
 
