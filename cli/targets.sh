@@ -179,6 +179,7 @@ function readTargetParams {
   PASSTHROUGH=()
   DESTINATION_SEARCH_ARGS=(${CLI_PARAMS[@]})
   DESTINATION_NAME=
+  SHARD_COUNT=
   DESTINATION_INDEX=
   DESTINATION_REGION=
   DESTINATION_ROLE_ARN=
@@ -190,6 +191,15 @@ function readTargetParams {
     if [ "$CODE" == "--destination" ]; then
       if [ $# -ne 0 ]; then
         DESTINATION_NAME=$1
+        shift
+      else
+        echo "readTargetParams: You must specify a value for parameter $CODE" 1>&2
+        doHelp
+        exit -1
+      fi
+    elif [ "$CODE" == "--shard-count" ]; then
+      if [ $# -ne 0 ]; then
+        SHARD_COUNT=$1
         shift
       else
         echo "readTargetParams: You must specify a value for parameter $CODE" 1>&2
@@ -423,6 +433,7 @@ function buildObject {
     appendJsonProperty "$1" "id" "{\"S\":\"${WORKER_ID}\"}"
     appendJsonProperty "$1" "type" "{\"S\":\"${WORKER_TYPE}\"}"
     appendJsonProperty "$1" "destination" "{\"S\":\"${DESTINATION_ID}\"}"
+    appendJsonProperty "$1" "shardCount" "{\"N\":\"${SHARD_COUNT}\"}"
 
     if [ ! -z "${DESTINATION_ROLE_ARN}" ]; then
       appendJsonProperty "$1" "role" "{\"S\":\"${DESTINATION_ROLE_ARN}\"}"
