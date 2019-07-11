@@ -43,7 +43,7 @@ services.configure(config);
 // This function posts data to the specified service
 //  If the target is marked as 'collapse', records will
 //  be grouped in a single payload before being sent
-function postToService(serviceReference, target, records, stats, callback) {
+function postToService(serviceReference, targets, records, stats, callback) {
 	var parallelPosters = target.parallel ? config.parallelPosters : 1;
 	var errors = [];
   var definition = serviceReference.definition;
@@ -62,7 +62,7 @@ function postToService(serviceReference, target, records, stats, callback) {
 	records = records.filter(function (record) {
     var size = record.size + (includeKey ? Buffer.byteLength(record.key) : 0);
 		if((size + listOverhead + recordOverhead) > maxUnitSize) {
-			console.error("Record too large to be pushed to target '" + target.id + "' of type '" + target.type + "':\n", JSON.stringify(record));
+			console.error("Record too large to be pushed to target'";
 			errors.push(new Error("Record too large, was removed"));
 			return false;
 		} else {
@@ -71,7 +71,8 @@ function postToService(serviceReference, target, records, stats, callback) {
 	});
 
 	// Group records per block for sending
-	var maxRecordsPerBlock = (target.collapse !== null) && (target.collapse != "") && (target.collapse != "none") ? maxRecords : 1;
+	// var maxRecordsPerBlock = (target.collapse !== null) && (target.collapse != "") && (target.collapse != "none") ? maxRecords : 1;
+  var maxRecordsPerBlock = 1;
 	var blocks = [];
 	var blockSize = listOverhead;
 	var block = [];
@@ -97,7 +98,7 @@ function postToService(serviceReference, target, records, stats, callback) {
 
 	// Posts the blocks to the target services
   var queue = async.queue(function(block, done) {
-    definition.send(service, target, block.records, done);
+    definition.send(service, targets, block.records, done);
   }, parallelPosters);
 
   queue.drain = function() {
@@ -110,18 +111,9 @@ function postToService(serviceReference, target, records, stats, callback) {
     queue.push({ records: block }, function(err) {
       if(err) {
         errors.push(err);
-        console.error("An error occured while pushing data to target '" + target.id + "' of type '" + target.type + "':", err);
+        console.error("An error occured while pushing data to target");
       }
     });
-  });
-}
-
-//********
-// This function transfers an entire event to the underlying service
-function interceptService(serviceReference, target, event, stats, callback) {
-  serviceReference.definition.intercept(serviceReference.service, target, event, function(err) {
-    serviceReference.dispose();
-    callback(err);
   });
 }
 
@@ -140,24 +132,15 @@ function sendMessages(eventSourceARN, targets, event, stats, callback) {
   })
 
   async.waterfall([
-      function(done) { services.get(target, done); },
+      function(done) { services.get(targets, done); },
       function(serviceReference, done) { 
         var definition = serviceReference.definition;
-        if(definition.intercept) {
-          if(target.passthrough) {
-            transformation.transformRecords(event.Records, target, function(err, transformedRecords) {
-              transformedRecords.forEach(function(record) { record.data = record.data.toString('base64') });
-              interceptService(serviceReference, target, { Records: transformedRecords }, stats, done);
-            });
-          } else {
-            interceptService(serviceReference, target, event, stats, done);
-          }
-        } else if (definition.send) {
-          transformation.transformRecords(event.Records, target, function(err, transformedRecords) {
-            postToService(serviceReference, target, transformedRecords, stats, done);
+        if (definition.send) {
+          transformation.transformRecords(event.Records, targets, function(err, transformedRecords) {
+            postToService(serviceReference, targets, transformedRecords, stats, done);
           });
         } else {
-          done(new Error("Invalid module '" + target.type + "', it must export either an 'intercept' or a 'send' method"));
+          done(new Error("Invalid module '" + target.type + "', it must export a 'send' method"));
         }
       }
     ], function(err) {
@@ -188,7 +171,7 @@ function fanOut(eventSourceARN, event, context, targets, stats, callback) {
   var hasErrors    = false;
 
   var queue = async.queue(function(targets, done) {
-    sendMessages(eventSourceARN, target, event, stats, done);
+    sendMessages(eventSourceARN, targets, event, stats, done);
   }, config.parallelTargets);
 
   queue.drain = function() {
