@@ -29,4 +29,21 @@ describe('post-sqs', function() {
       assert.strictEqual(PostSQS.queueUrl(target, record), "https://sqs.us-east-1.amazonaws.com/accountNum/base_queue_name_1.fifo")
     })
   })
+
+  describe('#getTarget', function() {
+    it('gets the appropriate target for a record based on the eventType', function(){
+      const targets = [
+        {eventType: "ConditionsAdded"},
+        {eventType: "ConditionsDeleted"}
+      ]
+      var record = {
+        data: JSON.stringify({eventType: "ConditionsAdded"})
+      }
+      assert.deepStrictEqual(PostSQS.getTarget(targets, record), {eventType: "ConditionsAdded"})
+      var record = {
+        data: JSON.stringify({eventType: "ConditionsDeleted"})
+      }
+      assert.deepStrictEqual(PostSQS.getTarget(targets, record), {eventType: "ConditionsDeleted"})
+    })
+  })
 })

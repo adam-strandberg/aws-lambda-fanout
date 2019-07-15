@@ -44,7 +44,8 @@ services.configure(config);
 //  If the target is marked as 'collapse', records will
 //  be grouped in a single payload before being sent
 function postToService(serviceReference, targets, records, stats, callback) {
-	var parallelPosters = target.parallel ? config.parallelPosters : 1;
+	// var parallelPosters = target.parallel ? config.parallelPosters : 1;
+  var parallelPosters = 1;
 	var errors = [];
   var definition = serviceReference.definition;
   var service = serviceReference.service;
@@ -62,7 +63,7 @@ function postToService(serviceReference, targets, records, stats, callback) {
 	records = records.filter(function (record) {
     var size = record.size + (includeKey ? Buffer.byteLength(record.key) : 0);
 		if((size + listOverhead + recordOverhead) > maxUnitSize) {
-			console.error("Record too large to be pushed to target'";
+			console.error("Record too large to be pushed to target");
 			errors.push(new Error("Record too large, was removed"));
 			return false;
 		} else {
@@ -120,16 +121,10 @@ function postToService(serviceReference, targets, records, stats, callback) {
 //********
 // This function manages the messages for a target
 function sendMessages(eventSourceARN, targets, event, stats, callback) {
-  if(config.debug) {
-    console.log("Processing target '" + target.id + "'");
-  }
-
-  var start = Date.now();
-  targets.forEach(function(target) {
-    stats.addTick('targets#' + eventSourceARN);
-    stats.register('records#' + eventSourceARN + '#' + target.destination, 'Records', 'stats', 'Count', eventSourceARN, target.destination);
-    stats.addValue('records#' + eventSourceARN + '#' + target.destination, event.Records.length);
-  })
+  // TODO- add stats back in
+  // stats.addTick('targets#' + eventSourceARN);
+  // stats.register('records#' + eventSourceARN + '#' + target.destination, 'Records', 'stats', 'Count', eventSourceARN, target.destination);
+  // stats.addValue('records#' + eventSourceARN + '#' + target.destination, event.Records.length);
 
   async.waterfall([
       function(done) { services.get(targets, done); },
@@ -149,11 +144,6 @@ function sendMessages(eventSourceARN, targets, event, stats, callback) {
         callback(new Error("Error while processing target '" + target.id + "': " + err));
         return;
       }
-      var end = Date.now();
-      var duration = Math.floor((end - start) / 10) / 100;
-      if(config.debug) {
-        console.log("Target '" + target.id + "' for source '" + eventSourceARN + "' successfully processed in" , duration, "seconds with", event.Records.length,"records");
-      }
       callback();
     });
 }
@@ -171,6 +161,8 @@ function fanOut(eventSourceARN, event, context, targets, stats, callback) {
   var hasErrors    = false;
 
   var queue = async.queue(function(targets, done) {
+    console.log("AKS- logging targets")
+    console.log(targets)
     sendMessages(eventSourceARN, targets, event, stats, done);
   }, config.parallelTargets);
 
@@ -227,6 +219,8 @@ exports.handler = function(event, context) {
   var queue = async.queue(function(eventSourceARN, callback) {
     async.waterfall([
         function(done) {  configuration.get(eventSourceARN, services.definitions, done); },
+        console.log("AKS- logging targets in handler")
+        console.log(targets),
         function(targets, done) {  fanOut(eventSourceARN, sources[eventSourceARN], context, targets, stats, done); }
       ],
       callback);

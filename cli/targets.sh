@@ -178,7 +178,6 @@ function readSourceConfigParams {
 function readTargetParams {
   PASSTHROUGH=()
   DESTINATION_SEARCH_ARGS=(${CLI_PARAMS[@]})
-  DESTINATION_NAME=
   SHARD_COUNT=
   DESTINATION_INDEX=
   DESTINATION_REGION=
@@ -188,16 +187,7 @@ function readTargetParams {
   while [ $# -ne 0 ]; do
     CODE=$1
     shift
-    if [ "$CODE" == "--destination" ]; then
-      if [ $# -ne 0 ]; then
-        DESTINATION_NAME=$1
-        shift
-      else
-        echo "readTargetParams: You must specify a value for parameter $CODE" 1>&2
-        doHelp
-        exit -1
-      fi
-    elif [ "$CODE" == "--shard-count" ]; then
+    if [ "$CODE" == "--shard-count" ]; then
       if [ $# -ne 0 ]; then
         SHARD_COUNT=$1
         shift
@@ -209,6 +199,15 @@ function readTargetParams {
     elif [ "$CODE" == "--destination-base-queue-name" ]; then
       if [ $# -ne 0 ]; then
         DESTINATION_BASE_QUEUE_NAME=$1
+        shift
+      else
+        echo "readTargetParams: You must specify a value for parameter $CODE" 1>&2
+        doHelp
+        exit -1
+      fi
+    elif [ "$CODE" == "--event-type" ]; then
+      if [ $# -ne 0 ]; then
+        EVENT_TYPE=$1
         shift
       else
         echo "readTargetParams: You must specify a value for parameter $CODE" 1>&2
@@ -441,9 +440,9 @@ function buildObject {
     appendJsonProperty "$1" "sourceArn" "{\"S\":\"${SOURCE_ARN}\"}"
     appendJsonProperty "$1" "id" "{\"S\":\"${WORKER_ID}\"}"
     appendJsonProperty "$1" "type" "{\"S\":\"${WORKER_TYPE}\"}"
-    appendJsonProperty "$1" "destination" "{\"S\":\"${DESTINATION_ID}\"}"
     appendJsonProperty "$1" "shardCount" "{\"N\":\"${SHARD_COUNT}\"}"
     appendJsonProperty "$1" "destinationBaseQueueName" "{\"S\":\"${DESTINATION_BASE_QUEUE_NAME}\"}"
+    appendJsonProperty "$1" "eventType" "{\"S\":\"${EVENT_TYPE}\"}"
 
     if [ ! -z "${DESTINATION_ROLE_ARN}" ]; then
       appendJsonProperty "$1" "role" "{\"S\":\"${DESTINATION_ROLE_ARN}\"}"

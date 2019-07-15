@@ -31,27 +31,6 @@ source "$DIR/cli/functions.sh"
 source "$DIR/cli/targets.sh"
 source "$DIR/cli/help.sh"
 
-
-## Locates a destination Amazon SQS Queue
-function checkSqsTarget {
-  if [ ! -z "$DESTINATION_NAME" ]; then
-    DESTINATION_ID=$( echo "$DESTINATION_NAME" | grep -E -e '^https://((queue)|(sqs\.[a-z]+-[a-z]+-[0-9]))\.amazonaws\.com/[0-9]{12}/[a-zA-Z0-9_-]{1,80}?(\.fifo)$' )
-    if [ -z "${DESTINATION_ID}" ]; then
-      if [ ! -z "${DESTINATION_ROLE_ARN}" ]; then
-        echo "Invalid url '${DESTINATION_NAME}', must be a fully qualified Amazon SQS Queue Url" 1>&2
-        echo " - You specified a Role ARN, and name expansion can only be made on queues within your local user" 1>&2
-        exit -1
-      else
-        DESTINATION_ID=$(aws sqs get-queue-url --queue-name ${DESTINATION_NAME} --query 'QueueUrl' --output text ${DESTINATION_SEARCH_ARGS[@]} 2> /dev/null)
-        if [ -z "${DESTINATION_ID}" ]; then
-          echo "Can not find queue with name '${DESTINATION_NAME}' in the local account" 1>&2
-          exit -1
-        fi
-      fi
-    fi
-  fi
-}
-
 ACTION=
 if [ $# -ne 0 ]; then
   ACTION=$1
@@ -68,7 +47,7 @@ if [ "$ACTION" == "register" ]; then
   readCliParams $@
   readTargetParams ${PASSTHROUGH[@]}
   if [ "$WORKER_TYPE" == "sqs" ]; then
-    checkSqsTarget
+    echo "Using SQS"
   else
     echo "Invalid target type '$WORKER_TYPE', you must specify a target type, one of" 1>&2
     echo " - sqs: for specifying an Amazon Simple Queue Service (SQS) Queue" 1>&2
