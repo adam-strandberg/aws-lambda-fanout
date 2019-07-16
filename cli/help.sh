@@ -97,8 +97,6 @@ function helpCreateFunctionParams {
 function helpObjectProperties {
   echo "Target properties" 1>&2
   echo "  --active <flag>: sets the active status of the target" 1>&2
-  echo "  --collapse <none|JSON|concat|concat-b64>: collapses multiple input messages into one output payload (IoT, SNS, SQS)" 1>&2
-  echo "  --parallel <flag>: processes multiple messages in parallel for efficiency" 1>&2
   echo "  --convert-ddb <flag>: for Amazon DynamoDB Streams messages, converts the DDB objects to plain JavaScript objects" 1>&2
   echo "  --deaggregate <flag>: for Amazon Kinesis Streams messages, deserializes KPL (protobuf-based) messages" 1>&2
   echo "  --append-newlines <flag>: for Amazon DynamoDB Streams messages, append a newline to the end of each record" 1>&2

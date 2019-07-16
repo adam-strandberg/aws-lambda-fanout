@@ -290,12 +290,11 @@ function readTargetParams {
   fi
 }
 
-## Manages the attributes of a target (active, collapse, parallel)
+## Manages the attributes of a target (active, parallel)
 # All remaining parameters will be made available in the ${PASSTHROUGH[@]} array
 function readObjectProperties {
   PASSTHROUGH=()
   ACTIVE=
-  COLLAPSE=
   PARALLEL=
   CONVERT_DDB=
   DEAGGREGATE=
@@ -307,15 +306,6 @@ function readObjectProperties {
     if [ "$CODE" == "--active" ]; then
       if [ $# -ne 0 ]; then
         ACTIVE=$1
-        shift
-      else
-        echo "readObjectProperties: You must specify a value for parameter $CODE" 1>&2
-        doHelp
-        exit -1
-      fi
-    elif [ "$CODE" == "--collapse" ]; then
-      if [ $# -ne 0 ]; then
-        COLLAPSE=$1
         shift
       else
         echo "readObjectProperties: You must specify a value for parameter $CODE" 1>&2
@@ -378,11 +368,6 @@ function readObjectProperties {
     doHelp
     exit -1
   fi
-  if [ ! -z "${COLLAPSE}" ] && [ "${COLLAPSE}" != "none" ] && [ "${COLLAPSE}" != "JSON" ] && [ "${COLLAPSE}" != "concat" ] && [ "${COLLAPSE}" != "concat-b64" ]; then
-    echo "readObjectProperties: invalid property --collapse $COLLAPSE, must be one of (none, JSON, concat, concat-b64)" 1>&2
-    doHelp
-    exit -1
-  fi
   if [ ! -z "${PARALLEL}" ] && [ "${PARALLEL}" != "true" ] && [ "${PARALLEL}" != "false" ]; then
     echo "readObjectProperties: invalid boolean property --parallel $PARALLEL, must be one of (true, false)" 1>&2
     doHelp
@@ -442,7 +427,7 @@ function buildObject {
     appendJsonProperty "$1" "type" "{\"S\":\"${WORKER_TYPE}\"}"
     appendJsonProperty "$1" "shardCount" "{\"N\":\"${SHARD_COUNT}\"}"
     appendJsonProperty "$1" "destinationBaseQueueName" "{\"S\":\"${DESTINATION_BASE_QUEUE_NAME}\"}"
-    appendJsonProperty "$1" "eventType" "{\"S\":\"${EVENT_TYPE}\"}"
+    # appendJsonProperty "$1" "eventType" "{\"S\":\"${EVENT_TYPE}\"}"
 
     if [ ! -z "${DESTINATION_ROLE_ARN}" ]; then
       appendJsonProperty "$1" "role" "{\"S\":\"${DESTINATION_ROLE_ARN}\"}"
@@ -458,10 +443,7 @@ function buildObject {
     exit
   fi
   if [ ! -z "${ACTIVE}" ]; then
-    appendJsonProperty "$1" "active" "{\"BOOL\":${ACTIVE}}"
-  fi
-  if [ ! -z "${COLLAPSE}" ]; then
-    appendJsonProperty "$1" "collapse" "{\"S\":\"${COLLAPSE}\"}"
+    appendJsonProperty "$1" "active" "{\"S\":\"${ACTIVE}\"}"
   fi
   if [ ! -z "${PARALLEL}" ]; then
     appendJsonProperty "$1" "parallel" "{\"BOOL\":${PARALLEL}}"
@@ -475,6 +457,8 @@ function buildObject {
   if [ ! -z "${APPEND_NEWLINES}" ]; then
     appendJsonProperty "$1" "appendNewlines" "{\"BOOL\":${APPEND_NEWLINES}}"
   fi
+  echo "object definition"
+  echo $OBJECT_DEFINITION
 }
 
 ## Registers the function to the specified source
@@ -527,10 +511,7 @@ function setHookFanoutSourceState {
 ## Adds a target (source, name, destination-id, region, role) to the list of targets of the fanout function
 function registerFanoutTarget {
   if [ -z "${ACTIVE}" ]; then
-    ACTIVE=false
-  fi
-  if [ -z "${COLLAPSE}" ]; then
-    COLLAPSE=none
+    ACTIVE="false"
   fi
 
   buildObject create
@@ -550,5 +531,5 @@ function unregisterFanoutTarget {
 
 ## Lists the targets from the list of targets of the fanout function for a specific source
 function listFanoutTargets {
-  aws dynamodb query --table-name ${TABLE_NAME} --key-condition-expression "sourceArn = :sourceArn" --expression-attribute-values "{\":sourceArn\":{\"S\":\"${SOURCE_ARN}\"}}" --query 'Items[*].{_1_id: id.S, _2_type: type.S, _3_destination: destination.S, _4_active: active.BOOL}' --output table ${CLI_PARAMS[@]}
+  aws dynamodb query --table-name ${TABLE_NAME} --key-condition-expression "sourceArn = :sourceArn" --expression-attribute-values "{\":sourceArn\":{\"S\":\"${SOURCE_ARN}\"}}" --query 'Items[*].{_1_id: id.S, _2_type: type.S, _3_destination: destination.S, _4_active: active.S}' --output table ${CLI_PARAMS[@]}
 }

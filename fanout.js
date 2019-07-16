@@ -40,9 +40,6 @@ statistics.configure(config);
 services.configure(config);
 
 //********
-// This function posts data to the specified service
-//  If the target is marked as 'collapse', records will
-//  be grouped in a single payload before being sent
 function postToService(serviceReference, targets, records, stats, callback) {
 	// var parallelPosters = target.parallel ? config.parallelPosters : 1;
   var parallelPosters = 1;
@@ -71,35 +68,8 @@ function postToService(serviceReference, targets, records, stats, callback) {
 		}
 	});
 
-	// Group records per block for sending
-	// var maxRecordsPerBlock = (target.collapse !== null) && (target.collapse != "") && (target.collapse != "none") ? maxRecords : 1;
-  var maxRecordsPerBlock = 1;
-	var blocks = [];
-	var blockSize = listOverhead;
-	var block = [];
-	while(records.length > 0) {
-		var record = records.shift();
-		var recordSize = record.size + (includeKey ? record.key.length : 0) + recordOverhead + (block.length > 0 ? interRecordOverhead: 0);
-
-		if(((blockSize + recordSize) > maxSize) || (block.length >= maxRecordsPerBlock)) {
-			// Block full, start a new block
-			blocks.push(block);
-			block = [];
-			blockSize = listOverhead;
-		}
-
-		// Add the record to the records to send
-		blockSize = blockSize + recordSize;
-		block.push(record);
-	}
-	if(block.length > 0) {
-		blocks.push(block);
-		block = [];
-	}
-
-	// Posts the blocks to the target services
-  var queue = async.queue(function(block, done) {
-    definition.send(service, targets, block.records, done);
+  var queue = async.queue(function(record, done) {
+    definition.send(service, targets, record, done);
   }, parallelPosters);
 
   queue.drain = function() {
@@ -108,8 +78,12 @@ function postToService(serviceReference, targets, records, stats, callback) {
   };
 
   // Add all targets to the queue
-  blocks.forEach(function(block) {
-    queue.push({ records: block }, function(err) {
+  console.log("AKS-counting records")
+  console.log(records.length)
+  records.forEach(function(record) {
+    console.log("AKS-pushing records")
+    console.log(record)
+    queue.push(record, function(err) {
       if(err) {
         errors.push(err);
         console.error("An error occured while pushing data to target");
@@ -120,18 +94,19 @@ function postToService(serviceReference, targets, records, stats, callback) {
 
 //********
 // This function manages the messages for a target
-function sendMessages(eventSourceARN, targets, event, stats, callback) {
+function sendMessages(targets, records, stats, callback) {
   // TODO- add stats back in
   // stats.addTick('targets#' + eventSourceARN);
   // stats.register('records#' + eventSourceARN + '#' + target.destination, 'Records', 'stats', 'Count', eventSourceARN, target.destination);
   // stats.addValue('records#' + eventSourceARN + '#' + target.destination, event.Records.length);
+  console.log('invoking sendMessages')
 
   async.waterfall([
       function(done) { services.get(targets, done); },
       function(serviceReference, done) { 
         var definition = serviceReference.definition;
         if (definition.send) {
-          transformation.transformRecords(event.Records, targets, function(err, transformedRecords) {
+          transformation.transformRecords(records, targets, function(err, transformedRecords) {
             postToService(serviceReference, targets, transformedRecords, stats, done);
           });
         } else {
@@ -159,52 +134,21 @@ exports.handler = function(event, context) {
     console.log("Starting process of " + event.Records.length + " events");
   }
 
-  // Group records per source ARN
-  var sources = {};
-  event.Records.forEach(function(record) {
-    var eventSourceARN = record.eventSourceARN || record.TopicArn;
-    if(! sources.hasOwnProperty(eventSourceARN)) {
-      stats.addTick('sources');
-      stats.register('records#' + eventSourceARN, 'Records', 'counter', 'Count', eventSourceARN);
-      stats.register('targets#' + eventSourceARN, 'Targets', 'counter', 'Count', eventSourceARN);
-      sources[eventSourceARN] = { Records: [record] };
-    } else {
-      sources[eventSourceARN].Records.push(record);
-    }
-    stats.addTick('records#' + eventSourceARN);
-  });
-
-  var eventSourceARNs = Object.keys(sources);
   var hasError = false;
 
-  var queue = async.queue(function(eventSourceARN, callback) {
-    async.waterfall([
-        function(done) {  
-          configuration.get(eventSourceARN, services.definitions, done); 
-        },
-        function(targets, done) {  
-          sendMessages(eventSourceARN, targets, sources[eventSourceARN], stats, done); 
-        }
-      ],
-      callback);
-  });
-
-  queue.drain = function() {
-    stats.publish(function() {
-      if(hasError) {
-        context.fail('Some processing errors occured, check logs'); // ERROR with message
-      } else {
-        context.succeed("Done processing all subscribers for this event, no errors detected"); // SUCCESS with message
+  async.waterfall([
+      function(done) {  
+        configuration.get(services.definitions, done); 
+      },
+      function(targets, done) { 
+        sendMessages(targets, event.Records, stats, done); 
       }
-    });
-  };
-
-  eventSourceARNs.forEach(function(eventSourceARN) {
-    queue.push(eventSourceARN, function(err) {
+    ],
+    function(err) {
       if(err) {
-        console.error("Error while processing events from source '" + eventSourceARN + "'", err);
+        console.error("Error while processing events", err);
         hasError = true;
       }
-    })
-  });
+    }
+  );
 };
