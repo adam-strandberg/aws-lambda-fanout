@@ -127,10 +127,7 @@ function sendMessages(eventSourceARN, targets, event, stats, callback) {
   // stats.addValue('records#' + eventSourceARN + '#' + target.destination, event.Records.length);
 
   async.waterfall([
-      function(done) { 
-        console.log("AKS- logging targets in sendMessages")
-        console.log(targets);
-        services.get(targets, done); },
+      function(done) { services.get(targets, done); },
       function(serviceReference, done) { 
         var definition = serviceReference.definition;
         if (definition.send) {
@@ -150,49 +147,6 @@ function sendMessages(eventSourceARN, targets, event, stats, callback) {
       callback();
     });
 }
-
-//********
-// This function reads a set of records from Amazon Kinesis or Amazon DynamoDB Streams and sends it to all subscribed parties
-// function fanOut(eventSourceARN, event, context, targets, stats, callback) {
-//   if(targets.length === 0) {
-//     console.log("No output subscribers found for this event");
-//     callback(null);
-//     return;
-//   }
-
-//   var start        = Date.now();
-//   var hasErrors    = false;
-
-//   sendMessages(eventSourceARN, targets, event, stats, callback).then((err) => {
-
-//   });
-
-  // var queue = async.queue(function(targets, done) {
-  //   console.log("AKS- logging targets in async.queue");
-  //   console.log(targets);
-  //   sendMessages(eventSourceARN, targets, event, stats, done);
-  // }, config.parallelTargets);
-
-  // queue.drain = function() {
-  //   var end = Date.now();
-  //   var duration = Math.floor((end - start) / 10) / 100;
-  //   if(hasErrors) {
-  //     console.error("Processing of subscribers for this event ended with errors, check the logs in" , duration, "seconds");
-  //     callback(new Error("Some processing errors occured, check logs"));
-  //   } else {
-  //     console.log("Processing succeeded, processed " + event.Records.length + " records for " + targets.length + " targets in" , duration, "seconds");
-  //     callback(null);
-  //   }
-  // };
-
-  // queue.push(targets, function(err) {
-  //   if(err) {
-  //     console.error("Error processing record: ", err);
-  //     hasErrors = true;
-  //   }
-  // });
-
-// }
 
 //********
 // Lambda entry point. Loads the configuration and does the fanOut
